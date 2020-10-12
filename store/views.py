@@ -1,10 +1,10 @@
-from django.db.models import Sum
+from django.db.models import Sum, F
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.views import View
 import stripe
 
-from store.models import Item, Order
+from store.models import Item, Order, Tax, Discount
 from stripe_store.settings import STRIPE_PUBLISHABLE_KEY, STRIPE_SECRET_KEY
 
 
@@ -48,12 +48,14 @@ class PayForGoods(View):
         stripe.api_key = STRIPE_SECRET_KEY
         order = request.session.get('order_id', False)
         if order:
+            total_price_change = toggle_taxes_and_discounts(order)
             order = Order.objects.filter(id=order).prefetch_related('items').annotate(
                 total_price=Sum('items__price')
-            ).values()[0]
+            ).get()
+            amount = int(order.total_price + total_price_change) * 100
             if 'payment_intent_id' not in request.session:
                 intent = stripe.PaymentIntent.create(
-                    amount=int(order['total_price']) * 100,
+                    amount=amount,
                     currency='rub',
                     payment_method_types=['card']
                 )
@@ -61,12 +63,14 @@ class PayForGoods(View):
             else:
                 intent = stripe.PaymentIntent.modify(
                     request.session['payment_intent_id'],
-                    amount=int(order['total_price']) * 100,
+                    amount=amount,
                 )
             args = {
                 'secret_key': intent.client_secret,
                 'pub_key': STRIPE_PUBLISHABLE_KEY,
-                'payment_intent_id': intent.id
+                'payment_intent_id': intent.id,
+                'amount': int(amount / 100),
+                'currency': 'rub'
             }
             return render(request, self.template_name, args)
         else:
@@ -92,3 +96,76 @@ def success_payment(request):
 
 def cancel_payment(request):
     return render(request, 'store/cancel_payment.html')
+
+
+def toggle_taxes_and_discounts(order):
+    order = Order.objects.filter(id=order).prefetch_related('items', 'taxes', 'discounts').annotate(
+        price=Sum('items__price'),
+    ).get()
+
+    order.taxes.clear()
+    order.discounts.clear()
+
+    taxes = Tax.objects.all()
+    discounts = Discount.objects.all()
+
+    total_price_change = 0
+
+    order, price_change = check_conditions(order, taxes, 'taxes')
+    total_price_change += price_change
+
+    order, price_change = check_conditions(order, discounts, 'discounts')
+    total_price_change += price_change
+
+    order.save()
+    return total_price_change
+
+
+def check_conditions(order, queryset, query_type):
+    price_change = 0
+    for item in queryset:
+        if item.order_price_condition == 'LTE':
+            if order.price <= item.condition_price:
+                if query_type == 'discounts':
+                    price_change -= item.price
+                    order.discounts.add(item)
+                else:
+                    price_change += item.price
+                    order.taxes.add(item)
+
+        elif item.order_price_condition == 'LT':
+            if order.price < item.condition_price:
+                if query_type == 'discounts':
+                    price_change -= item.price
+                    order.discounts.add(item)
+                else:
+                    price_change += item.price
+                    order.taxes.add(item)
+
+        elif item.order_price_condition == 'GT':
+            if order.price > item.condition_price:
+                if query_type == 'discounts':
+                    price_change -= item.price
+                    order.discounts.add(item)
+                else:
+                    price_change += item.price
+                    order.taxes.add(item)
+
+        elif item.order_price_condition == 'GTE':
+            if order.price >= item.condition_price:
+                if query_type == 'discounts':
+                    price_change -= item.price
+                    order.discounts.add(item)
+                else:
+                    price_change += item.price
+                    order.taxes.add(item)
+
+        elif item.order_price_condition == 'EQ':
+            if order.price == item.condition_price:
+                if query_type == 'discounts':
+                    price_change -= item.price
+                    order.discounts.add(item)
+                else:
+                    price_change += item.price
+                    order.taxes.add(item)
+    return order, price_change

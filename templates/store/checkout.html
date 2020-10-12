@@ -7,6 +7,8 @@
     <script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
+{% load humanize %}
+<p>С учетом скидок и налогов ваш заказ вышел на стоимость: {{ amount|intcomma }} {{ currency }}</p>
 <form action="{% url 'store:success-payment' %}" method="post" id="payment-form">
     {% csrf_token %}
     <div id="card-element">
