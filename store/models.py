@@ -21,14 +21,32 @@ class Order(models.Model):
     def __str__(self):
         return 'order ' + str(self.id)
 
-    # class Tax(models.Model):
-#     orders = models.ManyToManyField(Order,related_name='taxes')
-#     price = models.PositiveIntegerField()
-#     reason = models.TextField()
-#     keyword = models.CharField()                  нужно добавить возможность выбирать ключевое слово
-#
-# class Discount(models.Model):
-#     orders = models.ManyToManyField(Order,related_name='discounts')
-#     price = models.PositiveIntegerField()
-#     reason = models.TextField()
-#     keyword = models.CharField()                  нужно добавить возможность выбирать ключевое слово
+
+class Tax(models.Model):
+    DELIVERY = 'DV'
+    ADDITIONAL_COST = 'AC'
+    TAXES_CHOICES = [
+        (DELIVERY, 'Доставка'),
+        (ADDITIONAL_COST, 'НДС')
+    ]
+    orders = models.ManyToManyField(Order, related_name='taxes')
+    price = models.PositiveIntegerField()
+    keyword = models.CharField(max_length=3, choices=TAXES_CHOICES)
+
+    def __str__(self):
+        return self.keyword + ' ' + str(self.price)
+
+
+class Discount(models.Model):
+    FREE_DELIVERY = 'FDV'
+    BIG_ORDER = 'BO'
+    DISCOUNT_CHOICES = [
+        (FREE_DELIVERY, 'Бесплатная доставка'),
+        (BIG_ORDER, 'Большой заказ')
+    ]
+    orders = models.ManyToManyField(Order, related_name='discounts')
+    price = models.PositiveIntegerField()
+    keyword = models.CharField(max_length=3, choices=DISCOUNT_CHOICES)
+
+    def __str__(self):
+        return self.keyword + ' ' + str(self.price)
