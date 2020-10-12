@@ -16,6 +16,7 @@
 
     </div>
     <input type="hidden" name="payment_intent_id" value="{{ payment_intent_id }}">
+    <input id="payment_method_id" type="hidden" name="payment_method_id" value="{{ payment_intent_id }}">
     <button id="submit-button">Заплатить</button>
 </form>
 </body>
@@ -58,9 +59,8 @@
                             errorElement.text(result.error.message);
                         } else {
                             let form = $('#payment-form').get(0);
-                            let hiddenInput = "<input type='hidden' name='payment_method_id' value='" +
-                                result.paymentMethod.id + "'>";
-                            form.append(hiddenInput);
+                            let hiddenInput = $('#payment_method_id');
+                            hiddenInput.val(result.paymentMethod.id);
                             form.submit();
                         }
                     })

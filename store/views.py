@@ -1,5 +1,5 @@
-from django.db.models import Count, Sum
-from django.http import HttpResponse, JsonResponse
+from django.db.models import Sum
+from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.views import View
 import stripe
@@ -45,7 +45,6 @@ class PayForGoods(View):
     template_name = 'store/checkout.html'
 
     def post(self, request):
-        # request.session.flush()
         stripe.api_key = STRIPE_SECRET_KEY
         order = request.session.get('order_id', False)
         if order:
@@ -72,10 +71,22 @@ class PayForGoods(View):
             return render(request, self.template_name, args)
         else:
             return HttpResponse('Корзина пуста')
-        # return HttpResponse('asd')
 
 
 def success_payment(request):
+    payment_intent_id = request.POST['payment_intent_id']
+    payment_method_id = request.POST['payment_method_id']
+
+    stripe.api_key = STRIPE_SECRET_KEY
+    stripe.PaymentIntent.modify(
+        payment_intent_id,
+        payment_method=payment_method_id
+    )
+    stripe.PaymentIntent.confirm(payment_intent_id)
+
+    order = Order.objects.get(id=request.session.get('order_id', False))
+    order.delete()
+    request.session.flush()
     return render(request, 'store/success_payment.html')
 
 
