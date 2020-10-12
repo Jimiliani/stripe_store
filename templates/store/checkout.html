@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Оплата</title>
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+<form action="{% url 'store:success-payment' %}" method="post" id="payment-form">
+    {% csrf_token %}
+    <div id="card-element">
+
+    </div>
+    <div id="card-errors" role="alert">
+
+    </div>
+    <input type="hidden" name="payment_intent_id" value="{{ payment_intent_id }}">
+    <button id="submit-button">Заплатить</button>
+</form>
+</body>
+<script>
+    $(window).on('load', function () {
+        let stripe = Stripe('{{ pub_key }}');
+        let elements = stripe.elements()
+        let style = {
+            base: {
+                color: '#32325d'
+            },
+            invalid: {
+                color: '#fa755a'
+            }
+        };
+        let card = elements.create('card', {'style': style});
+        card.mount("#card-element");
+        card.on('change', function (event) {
+            let displayError = $('#card-errors');
+            if (event.error) {
+                displayError.text(event.error.message);
+            } else {
+                displayError.text('');
+            }
+        })
+        let form = $('#payment-form');
+        form.on('submit', function (event) {
+            event.preventDefault();
+            stripe.createToken(card).then(function (result) {
+                if (result.error) {
+                    let errorElement = $('#card-errors');
+                    errorElement.text(result.error.message);
+                } else {
+                    stripe.createPaymentMethod({
+                        type: 'card',
+                        card: card
+                    }).then(function (result) {
+                        if (result.error) {
+                            let errorElement = $('#card-errors');
+                            errorElement.text(result.error.message);
+                        } else {
+                            let form = $('#payment-form').get(0);
+                            let hiddenInput = "<input type='hidden' name='payment_method_id' value='" +
+                                result.paymentMethod.id + "'>";
+                            form.append(hiddenInput);
+                            form.submit();
+                        }
+                    })
+                }
+            })
+        })
+    })
+</script>
+</html>

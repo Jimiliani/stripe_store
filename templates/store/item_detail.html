@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ item.name }}</title>
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+<h1>{{ item.name }}</h1>
+<p>{{ item.description }}</p>
+<p>{{ item.price }} {{ item.currency }}</p>
+<button id="add-to-cart">{% if is_item_in_order %}Убрать из корзины{% else %}Добавить в корзину{% endif %}</button>
+<form method="POST" action="{% url 'store:pay-for-goods' %}">
+    {% csrf_token %}
+    <button type="submit" id="end-buying">Перейти к оплате</button>
+</form>
+<script>
+    let stripe = Stripe('{{ pub_key }}');
+    let addToCartItem = $('#add-to-cart');
+    addToCartItem.on('click', function () {
+        let is_item_in_order = !(addToCartItem.text() === 'Добавить в корзину');
+        let item_pk = parseInt('{{ item.id }}');
+        $.ajax({
+            url: '{{ item.get_absolute_url }}',
+            type: (is_item_in_order ? "DELETE" : "POST"),
+            beforeSend: function (xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", '{{ csrf_token }}');
+            },
+            success: function (response) {
+                if (!is_item_in_order) {
+                    addToCartItem.text('Убрать из корзины')
+                } else {
+                    addToCartItem.text('Добавить в корзину')
+                }
+            },
+            error: function (data, errors) {
+                console.log(data);
+                console.log(errors);
+            }
+        })
+    })
+</script>
+
+</body>
+</html>

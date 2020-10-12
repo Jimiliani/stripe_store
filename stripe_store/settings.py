@@ -5,18 +5,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 
+STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
+
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
+
 DEBUG = True
 
 ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
+    'store.apps.StoreConfig',
+    'silk',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'silk'
 ]
 
 MIDDLEWARE = [
