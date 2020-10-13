@@ -3,13 +3,13 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = '7@4rn4uss&kp$ir1vj%&fg@ch@#3z6v&mlaf4urk&(nwmtqko2'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
-STRIPE_PUBLISHABLE_KEY = 'pk_test_51HahZwJe5a5futjdSQ9NWxDjphOykmzESUIfiIuLleBEJ90kJhOzq0FJucrHnPHj1bX0CuBg1UXtgmijVCAFRGeg001AtWhhFl'
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
 
-STRIPE_SECRET_KEY = 'sk_test_51HahZwJe5a5futjdcJNZqkLM335XzDJy2CrwC25ANhnXXApkXJa2lkKtetc7rJb3VWWdX3gAC2kuALIVLQ8tjgyU00FKJ9805s'
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 
-DEBUG = True
+DEBUG = bool(os.environ.get('DEBUG', default=0))
 
 ALLOWED_HOSTS = ['*']
 
@@ -59,12 +59,12 @@ WSGI_APPLICATION = 'stripe_store.wsgi.application'
 
 DATABASES = {
     "default": {
-        "ENGINE": 'django.db.backends.postgresql_psycopg2',   # "django.db.backends.sqlite3"
-        "NAME": 'stripe_store',
-        "USER": 'stripe_store_admin',
-        "PASSWORD": 'stripe_store_admin',
-        "HOST": 'db',
-        "PORT": '5432',
+        "ENGINE": os.environ.get("SQL_ENGINE"),  # "django.db.backends.sqlite3"
+        "NAME": os.environ.get("SQL_DATABASE", os.path.join(BASE_DIR, "db.sqlite3")),
+        "USER": os.environ.get("SQL_USER", "user"),
+        "PASSWORD": os.environ.get("SQL_PASSWORD", "password"),
+        "HOST": os.environ.get("SQL_HOST", "localhost"),
+        "PORT": os.environ.get("SQL_PORT", "5432"),
     }
 }
 
