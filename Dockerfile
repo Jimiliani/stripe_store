@@ -1,12 +1,13 @@
 FROM python:3.8
 
-WORKDIR /usr/src/stripe_store
+ENV PYTHONUNBUFFERED=1
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+RUN mkdir /code
 
-RUN pip install --upgrade pip
-COPY ./requirements.txt .
+WORKDIR /code
+
+COPY requirements.txt /code/
+
 RUN pip install -r requirements.txt
 
-COPY . /user/src/stripe_store
+COPY . /code/
