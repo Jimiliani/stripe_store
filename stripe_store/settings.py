@@ -9,9 +9,9 @@ STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
 
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
 
-DEBUG = True
+DEBUG = bool(os.getenv('DEBUG', default=1))
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
 
 INSTALLED_APPS = [
     'store.apps.StoreConfig',
