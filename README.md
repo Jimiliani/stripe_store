@@ -1,8 +1,10 @@
 # Тестовое задание
 
 Запуск с помощью команды sudo docker-compose up -d --build
+
 Далее создаем суперпользователя sudo docker-compose exec web python manage.py createsuperuser
-Зайти в админку, добавить вещи, налоги и скидки
+
+Заходим в админку, добавляем вещи, налоги и скидки
 
 Переменные среды есть в .env.dev
 
