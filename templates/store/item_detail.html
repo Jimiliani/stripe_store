@@ -9,7 +9,7 @@
 <body>
 <h1>{{ item.name }}</h1>
 <p>{{ item.description }}</p>
-<p>{{ item.price }} {{ item.currency }}</p>
+<p>{{ item.price }} ₽</p>
 <button id="add-to-cart">{% if is_item_in_order %}Убрать из корзины{% else %}Добавить в корзину{% endif %}</button>
 <form method="POST" action="{% url 'store:pay-for-goods' %}">
     {% csrf_token %}

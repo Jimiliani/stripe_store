@@ -19,7 +19,6 @@ class Item(models.Model):
     name = models.CharField(max_length=255, null=False, blank=False, verbose_name='Название')
     description = models.TextField(null=False, blank=True, verbose_name='Описание')
     price = models.PositiveIntegerField(null=False, blank=False, verbose_name='Цена')
-    currency = models.CharField(max_length=3, verbose_name='Валюта')
 
     def __str__(self):
         return str(self.name)
@@ -52,6 +51,7 @@ class Tax(models.Model):
     ]
     orders = models.ManyToManyField(Order, related_name='taxes', blank=True, verbose_name='Заказы')
     price = models.PositiveIntegerField(verbose_name='Цена')
+    percentage_price = models.BooleanField(default=False, verbose_name='Цена налога указана в процентах')
     condition_price = models.PositiveIntegerField(verbose_name='Цена для условия')
     keyword = models.CharField(max_length=3, choices=TAXES_CHOICES, verbose_name='Вид налога')
     order_price_condition = models.CharField(
@@ -70,14 +70,15 @@ class Tax(models.Model):
 
 
 class Discount(models.Model):
-    FREE_DELIVERY = 'FDV'
+    MIDDLE_ORDER = 'MO'
     BIG_ORDER = 'BO'
     DISCOUNT_CHOICES = [
-        (FREE_DELIVERY, 'Бесплатная доставка'),
+        (MIDDLE_ORDER, 'Средний заказ'),
         (BIG_ORDER, 'Большой заказ')
     ]
     orders = models.ManyToManyField(Order, related_name='discounts', blank=True, verbose_name='Заказы')
     price = models.PositiveIntegerField(verbose_name='Цена')
+    percentage_price = models.BooleanField(default=False, verbose_name='Цена скидки указана в процентах')
     condition_price = models.PositiveIntegerField(verbose_name='Цена для условия')
     keyword = models.CharField(max_length=3, choices=DISCOUNT_CHOICES, verbose_name='Вид налога')
     order_price_condition = models.CharField(

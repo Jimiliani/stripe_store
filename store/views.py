@@ -48,11 +48,12 @@ class PayForGoods(View):
         stripe.api_key = STRIPE_SECRET_KEY
         order = request.session.get('order_id', False)
         if order:
-            total_price_change = toggle_taxes_and_discounts(order)
+            total_price_change, total_percentage_price_change = toggle_taxes_and_discounts(order)
             order = Order.objects.filter(id=order).prefetch_related('items').annotate(
                 total_price=Sum('items__price')
             ).get()
-            amount = int(order.total_price + total_price_change) * 100
+            amount = int(order.total_price + total_price_change +
+                         (order.total_price * total_percentage_price_change) / 100) * 100
             if 'payment_intent_id' not in request.session:
                 intent = stripe.PaymentIntent.create(
                     amount=amount,
@@ -70,7 +71,7 @@ class PayForGoods(View):
                 'pub_key': STRIPE_PUBLISHABLE_KEY,
                 'payment_intent_id': intent.id,
                 'amount': int(amount / 100),
-                'currency': 'rub'
+                'currency': '₽'
             }
             return render(request, self.template_name, args)
         else:
@@ -99,7 +100,7 @@ def cancel_payment(request):
 
 
 def toggle_taxes_and_discounts(order):
-    order = Order.objects.filter(id=order).prefetch_related('items', 'taxes', 'discounts').annotate(
+    order = Order.objects.filter(id=order).prefetch_related('items').annotate(
         price=Sum('items__price'),
     ).get()
 
@@ -110,62 +111,66 @@ def toggle_taxes_and_discounts(order):
     discounts = Discount.objects.all()
 
     total_price_change = 0
+    total_percentage_price_change = 0
 
-    order, price_change = check_conditions(order, taxes, 'taxes')
+    order, price_change, percentage_price_change = check_conditions(order, taxes, 'taxes')
     total_price_change += price_change
+    total_percentage_price_change += percentage_price_change
 
-    order, price_change = check_conditions(order, discounts, 'discounts')
+    order, price_change, percentage_price_change = check_conditions(order, discounts, 'discounts')
     total_price_change += price_change
+    total_percentage_price_change += percentage_price_change
 
     order.save()
-    return total_price_change
+    return total_price_change, total_percentage_price_change
 
 
 def check_conditions(order, queryset, query_type):
     price_change = 0
+    percentage_price_change = 0
     for item in queryset:
         if item.order_price_condition == 'LTE':
             if order.price <= item.condition_price:
-                if query_type == 'discounts':
-                    price_change -= item.price
-                    order.discounts.add(item)
+                if item.percentage_price:
+                    percentage_price_change = change_price(query_type, percentage_price_change, item, order)
                 else:
-                    price_change += item.price
-                    order.taxes.add(item)
+                    price_change = change_price(query_type, price_change, item, order)
 
         elif item.order_price_condition == 'LT':
             if order.price < item.condition_price:
-                if query_type == 'discounts':
-                    price_change -= item.price
-                    order.discounts.add(item)
+                if item.percentage_price:
+                    percentage_price_change = change_price(query_type, percentage_price_change, item, order)
                 else:
-                    price_change += item.price
-                    order.taxes.add(item)
+                    price_change = change_price(query_type, price_change, item, order)
 
         elif item.order_price_condition == 'GT':
             if order.price > item.condition_price:
-                if query_type == 'discounts':
-                    price_change -= item.price
-                    order.discounts.add(item)
+                if item.percentage_price:
+                    percentage_price_change = change_price(query_type, percentage_price_change, item, order)
                 else:
-                    price_change += item.price
-                    order.taxes.add(item)
+                    price_change = change_price(query_type, price_change, item, order)
 
         elif item.order_price_condition == 'GTE':
             if order.price >= item.condition_price:
-                if query_type == 'discounts':
-                    price_change -= item.price
-                    order.discounts.add(item)
+                if item.percentage_price:
+                    percentage_price_change = change_price(query_type, percentage_price_change, item, order)
                 else:
-                    price_change += item.price
-                    order.taxes.add(item)
+                    price_change = change_price(query_type, price_change, item, order)
 
         elif item.order_price_condition == 'EQ':
             if order.price == item.condition_price:
-                if query_type == 'discounts':
-                    price_change -= item.price
-                    order.discounts.add(item)
+                if item.percentage_price:
+                    percentage_price_change = change_price(query_type, percentage_price_change, item, order)
                 else:
-                    price_change += item.price
-                    order.taxes.add(item)
-    return order, price_change
+                    price_change = change_price(query_type, price_change, item, order)
+    return order, price_change, percentage_price_change
+
+
+def change_price(query_type, price_change, item, order):
+    if query_type == 'discounts':
+        price_change -= item.price
+        order.discounts.add(item)
+    else:
+        price_change += item.price
+        order.taxes.add(item)
+    return price_change
